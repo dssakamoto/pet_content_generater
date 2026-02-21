@@ -1,0 +1,19 @@
+# 環境変数（APIキーが含まれるため絶対にコミットしない）
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# 生成ファイル（大きいため除外）
+backend/app/outputs/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Docker
+*.log

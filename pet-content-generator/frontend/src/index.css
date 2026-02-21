@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #F0E8D8;
+  --ink: #1C1208;
+  --ink-mid: #7A6550;
+  --ink-light: #B0A090;
+  --accent: #C85A2C;
+  --accent-dark: #A84A20;
+  --border: #D4C4A8;
+}
+
+body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 85%, rgba(200, 90, 44, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 70% at 85% 15%, rgba(160, 120, 80, 0.06) 0%, transparent 70%);
+  min-height: 100vh;
+  font-family: 'Outfit', sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ポラロイドフレーム */
+.polaroid {
+  background: white;
+  padding: 12px 12px 40px;
+  box-shadow:
+    2px 3px 8px rgba(100, 70, 40, 0.15),
+    0 1px 3px rgba(100, 70, 40, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+.polaroid:hover {
+  transform: rotate(0deg) scale(1.04) !important;
+  box-shadow:
+    5px 8px 20px rgba(100, 70, 40, 0.22),
+    0 2px 6px rgba(100, 70, 40, 0.12);
+  z-index: 10;
+}
+
+/* スタンプ風トグルボタン */
+.stamp-btn {
+  border: 1.5px solid var(--border);
+  border-radius: 2px;
+  padding: 7px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ink-mid);
+  transition: all 0.15s ease;
+}
+
+.stamp-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.stamp-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
