@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { GenerateResult } from "../types";
 
 interface PreviewProps {
@@ -15,55 +16,59 @@ function downloadFile(url: string, filename: string) {
 
 function ResultHeader() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "28px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "32px" }}>
       <span style={{
-        width: "20px",
-        height: "1.5px",
+        width: "3px",
+        height: "12px",
         background: "var(--accent)",
         display: "inline-block",
         flexShrink: 0,
       }} />
       <span style={{
-        fontSize: "11px",
-        fontWeight: 600,
-        letterSpacing: "0.18em",
+        fontSize: "10px",
+        fontWeight: 500,
+        letterSpacing: "0.2em",
         textTransform: "uppercase",
-        color: "var(--accent)",
-        fontFamily: "'Outfit', sans-serif",
+        color: "var(--ink-mid)",
+        fontFamily: "'DM Sans', sans-serif",
       }}>
-        生成結果 / Result
+        Result
       </span>
     </div>
   );
 }
 
-function SaveButton({ onClick }: { onClick: () => void }) {
+function SaveButton({ onClick, filename }: { onClick: () => void; filename: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-label={`Download ${filename}`}
       style={{
         background: "none",
         border: "none",
-        fontSize: "10px",
-        color: "var(--ink-mid)",
+        fontSize: "9px",
+        color: "#9A8A70",
         cursor: "pointer",
-        fontFamily: "'Outfit', sans-serif",
+        fontFamily: "'DM Sans', sans-serif",
         fontWeight: 500,
-        letterSpacing: "0.08em",
+        letterSpacing: "0.1em",
         textTransform: "uppercase",
         padding: 0,
         textDecoration: "underline",
-        textDecorationColor: "var(--border)",
+        textDecorationColor: "#D4C8B0",
         textUnderlineOffset: "3px",
+        /* explicit transition */
+        transition: "color 0.15s ease, text-decoration-color 0.15s ease",
+        touchAction: "manipulation",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.color = "var(--accent)";
-        e.currentTarget.style.textDecorationColor = "var(--accent)";
+        e.currentTarget.style.color = "#6A5C40";
+        e.currentTarget.style.textDecorationColor = "#6A5C40";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.color = "var(--ink-mid)";
-        e.currentTarget.style.textDecorationColor = "var(--border)";
+        e.currentTarget.style.color = "#9A8A70";
+        e.currentTarget.style.textDecorationColor = "#D4C8B0";
       }}
     >
       Save
@@ -71,29 +76,34 @@ function SaveButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-export default function Preview({ result }: PreviewProps) {
-  if (!result) return null;
+const Preview = memo(function Preview({ result }: PreviewProps) {
+  if (result === null) return null;
 
   if (result.type === "image" && result.images) {
     return (
-      <div style={{ paddingTop: "8px" }}>
-        <div style={{ height: "1px", background: "var(--border)", marginBottom: "32px" }} />
+      <section aria-label="Generated images" style={{ paddingTop: "8px" }}>
+        <div style={{ height: "1px", background: "var(--border)", marginBottom: "36px" }} />
         <ResultHeader />
         <div style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "28px",
+          gap: "32px",
         }}>
           {result.images.map((src, i) => (
             <div
-              key={i}
+              key={src}
               className="polaroid"
-              style={{ transform: `rotate(${i % 2 === 0 ? -1.5 : 1}deg)` }}
+              style={{ transform: `rotate(${i % 2 === 0 ? -1.8 : 1.2}deg)` }}
             >
               <img
                 src={src}
-                alt={`Generated ${i + 1}`}
-                style={{ width: "100%", display: "block" }}
+                alt={`Generated image ${i + 1}`}
+                /* width/height で CLS を防止 (生成サイズ 1080x1080) */
+                width={1080}
+                height={1080}
+                /* below-fold は lazy load */
+                loading={i < 2 ? "eager" : "lazy"}
+                style={{ width: "100%", height: "auto", display: "block" }}
               />
               <div style={{
                 paddingTop: "10px",
@@ -102,37 +112,43 @@ export default function Preview({ result }: PreviewProps) {
                 alignItems: "center",
               }}>
                 <span style={{
-                  fontSize: "10px",
-                  color: "var(--ink-light)",
-                  fontFamily: "'Outfit', sans-serif",
+                  fontSize: "9px",
+                  color: "#9A8A70",
+                  fontFamily: "'DM Sans', sans-serif",
                   fontWeight: 300,
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.06em",
+                  /* tabular-nums で番号を等幅に */
+                  fontVariantNumeric: "tabular-nums",
                 }}>
                   No.{String(i + 1).padStart(2, "0")}
                 </span>
-                <SaveButton onClick={() => downloadFile(src, `pet-${i + 1}.png`)} />
+                <SaveButton
+                  onClick={() => downloadFile(src, `pet-${i + 1}.png`)}
+                  filename={`pet-${i + 1}.png`}
+                />
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     );
   }
 
   if (result.type === "video" && result.video) {
     return (
-      <div style={{ paddingTop: "8px" }}>
-        <div style={{ height: "1px", background: "var(--border)", marginBottom: "32px" }} />
+      <section aria-label="Generated video" style={{ paddingTop: "8px" }}>
+        <div style={{ height: "1px", background: "var(--border)", marginBottom: "36px" }} />
         <ResultHeader />
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "24px" }}>
           <div
             className="polaroid"
-            style={{ width: "100%", maxWidth: "280px", transform: "rotate(-0.5deg)" }}
+            style={{ width: "100%", maxWidth: "260px", transform: "rotate(-0.8deg)" }}
           >
             <video
               src={result.video}
               controls
               style={{ width: "100%", display: "block", aspectRatio: "9/16" }}
+              aria-label="Generated pet video"
             />
             <div style={{
               paddingTop: "12px",
@@ -141,22 +157,27 @@ export default function Preview({ result }: PreviewProps) {
               alignItems: "center",
             }}>
               <span style={{
-                fontSize: "10px",
-                color: "var(--ink-light)",
-                fontFamily: "'Outfit', sans-serif",
+                fontSize: "9px",
+                color: "#9A8A70",
+                fontFamily: "'DM Sans', sans-serif",
                 fontWeight: 300,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
               }}>
                 Video
               </span>
-              <SaveButton onClick={() => downloadFile(result.video!, "pet-video.mp4")} />
+              <SaveButton
+                onClick={() => downloadFile(result.video!, "pet-video.mp4")}
+                filename="pet-video.mp4"
+              />
             </div>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   return null;
-}
+});
+
+export default Preview;

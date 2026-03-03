@@ -37,8 +37,11 @@ There are no tests, linters, or CI pipelines configured.
 - `app/config.py` — `Settings` via pydantic-settings, reads `.env`. Optional API keys: `gemini_api_key`, `openai_api_key`, `stability_api_key` (all `str | None = None`)
 
 ### Frontend (React 18, Vite, TypeScript, Tailwind CSS)
-- `src/App.tsx` — Container component managing all state
-- `src/components/` — Presentational components: `ThemeInput`, `OutputSelector`, `GenerateButton`, `Preview`
+- `src/App.tsx` — Container component managing all state; `handleGenerate` stabilized with `useCallback([theme, animal, format])`; derived values (`label`, `isDisabled`) computed during render
+- `src/components/ThemeInput.tsx` — Uncontrolled-style input; re-renders on every keypress (correct behavior)
+- `src/components/OutputSelector.tsx` — Wrapped with `memo()`; skips re-render while user is typing in theme field
+- `src/components/GenerateButton.tsx` — Wrapped with `memo()`; only re-renders when `loading`/`disabled`/`label` change
+- `src/components/Preview.tsx` — Wrapped with `memo()`; only re-renders when `result` changes
 - `src/api/client.ts` — `generateImage()` and `generateVideo()` fetch wrappers
 - `src/types/index.ts` — Shared TypeScript interfaces
 - `vite.config.ts` — Proxies `/api` and `/outputs` to `http://backend:8000` (container networking)
@@ -50,6 +53,7 @@ There are no tests, linters, or CI pipelines configured.
 - **Noto CJK fonts** installed in backend Dockerfile for Japanese text rendering; font fallback chain in `mock.py:_find_font()`
 - **Docker named volume** (`backend-outputs`) persists generated files across container restarts; source code uses bind mounts for hot-reload
 - **Frontend design system** — CSS custom properties defined in `index.css` (not Tailwind config) for color tokens; component-specific classes (`.polaroid`, `.stamp-btn`) also in `index.css`; inline styles used for dynamic/state-driven values in TSX components
+- **React re-render optimization** — `OutputSelector`, `GenerateButton`, `Preview` wrapped with `memo()`; `handleGenerate` stabilized with `useCallback`; `useState` setters (`setAnimal` etc.) passed directly as props (already stable references); conditional rendering uses ternary `? : null` not `&&` (per `rendering-conditional-render` rule)
 - **API keys are all optional** — `Settings` fields default to `None`; backend starts without any key set. Implementations should guard with `if not settings.gemini_api_key: raise ...`
 
 ### Extension Points

@@ -101,8 +101,8 @@ Frontend (React+Vite :5173)
 ### フロントエンド
 
 - **デザインシステム** — `index.css` に CSS カスタムプロパティ（`--accent: #C85A2C` など）と共通クラス（`.polaroid`, `.stamp-btn`）を定義。Google Fonts（Playfair Display + Outfit）使用
-- `App.tsx` — 状態管理コンテナ
-- `components/` — `ThemeInput`（下線のみの入力）, `OutputSelector`（スタンプ風トグル）, `GenerateButton`（ネオブルータリストボタン）, `Preview`（ポラロイドフレーム）
+- `App.tsx` — 状態管理コンテナ。`handleGenerate` を `useCallback` でメモ化、`label` 等の派生値はレンダー中に計算
+- `components/` — `ThemeInput`（下線のみの入力）、`OutputSelector` / `GenerateButton` / `Preview` は `memo()` でラップ済み（タイピング中の不要な再レンダーを防止）
 - `api/client.ts` — バックエンド API の fetch ラッパー
 
 ## 開発

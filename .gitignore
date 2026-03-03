@@ -1,0 +1,8 @@
+# Claude Code ローカル設定（コミット不要）
+.claude/
+
+# Cline ローカル設定（コミット不要）
+.cline/
+
+# Windows NUL ファイル誤作成
+nul

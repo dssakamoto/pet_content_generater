@@ -7,10 +7,11 @@ interface ThemeInputProps {
 export default function ThemeInput({ value, onChange, disabled }: ThemeInputProps) {
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+      {/* <label> + htmlFor で input と紐付け (accessibility) */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
         <span style={{
-          width: "20px",
-          height: "1.5px",
+          width: "3px",
+          height: "12px",
           background: "var(--accent)",
           display: "inline-block",
           flexShrink: 0,
@@ -18,44 +19,44 @@ export default function ThemeInput({ value, onChange, disabled }: ThemeInputProp
         <label
           htmlFor="theme"
           style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            letterSpacing: "0.18em",
+            fontSize: "10px",
+            fontWeight: 500,
+            letterSpacing: "0.2em",
             textTransform: "uppercase",
-            color: "var(--accent)",
-            fontFamily: "'Outfit', sans-serif",
+            color: "var(--ink-mid)",
+            fontFamily: "'DM Sans', sans-serif",
+            cursor: "pointer",
           }}
         >
-          テーマ / Theme
+          Theme
         </label>
       </div>
+
       <input
         id="theme"
         type="text"
+        name="theme"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        placeholder="春の公園、雨の日のお昼寝..."
+        placeholder="Spring park, rainy day nap…"
+        autoComplete="off"
+        aria-label="Enter a content theme"
+        className="theme-input"
         style={{
           width: "100%",
           background: "transparent",
           border: "none",
-          borderBottom: "2px solid var(--border)",
-          padding: "10px 0",
-          fontSize: "22px",
-          fontFamily: "'Playfair Display', serif",
+          padding: "12px 0",
+          fontSize: "24px",
+          fontFamily: "'Cormorant Garamond', serif",
           fontWeight: 400,
+          fontStyle: "italic",
           color: "var(--ink)",
           outline: "none",
-          transition: "border-color 0.2s",
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled ? 0.4 : 1,
           boxSizing: "border-box",
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderBottomColor = "var(--accent)";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderBottomColor = "var(--border)";
+          caretColor: "var(--accent)",
         }}
       />
     </div>
