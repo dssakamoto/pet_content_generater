@@ -1,0 +1,14 @@
+[
+  {"month": "2024-01", "category": "食品", "revenue": 500000, "cost": 300000},
+  {"month": "2024-01", "category": "日用品", "revenue": 320000, "cost": 180000},
+  {"month": "2024-01", "category": "電子機器", "revenue": 850000, "cost": 600000},
+  {"month": "2024-02", "category": "食品", "revenue": 480000, "cost": 290000},
+  {"month": "2024-02", "category": "日用品", "revenue": 350000, "cost": 200000},
+  {"month": "2024-02", "category": "電子機器", "revenue": 920000, "cost": 650000},
+  {"month": "2024-03", "category": "食品", "revenue": 530000, "cost": 310000},
+  {"month": "2024-03", "category": "日用品", "revenue": 410000, "cost": 240000},
+  {"month": "2024-03", "category": "電子機器", "revenue": 780000, "cost": 560000},
+  {"month": "2024-04", "category": "食品", "revenue": 610000, "cost": 360000},
+  {"month": "2024-04", "category": "日用品", "revenue": 390000, "cost": 220000},
+  {"month": "2024-04", "category": "電子機器", "revenue": 1050000, "cost": 720000}
+]
