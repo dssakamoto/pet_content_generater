@@ -9,6 +9,8 @@ from typing import Any
 import streamlit as st
 from loguru import logger
 
+from app.config import settings
+
 
 def initialize_session_state() -> None:
     """session_stateの初期化を行う
@@ -26,9 +28,9 @@ def initialize_session_state() -> None:
         st.session_state.data_context = None
         logger.debug("session_state.data_context を初期化しました")
 
-    # 選択中のモデル名
+    # 選択中のモデル名（config.pyのデフォルトモデルを使用）
     if "selected_model" not in st.session_state:
-        st.session_state.selected_model: str = "llama3.2"
+        st.session_state.selected_model: str = settings.default_model
         logger.debug("session_state.selected_model を初期化しました")
 
     # アップロードファイルのハッシュ（変更検知用）

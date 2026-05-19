@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import io
-import sys
+import re
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from contextlib import redirect_stdout
 from typing import Any
@@ -19,16 +19,47 @@ from loguru import logger
 
 matplotlib.use("Agg")  # GUIバックエンドを無効化
 
-# 静的安全チェックで禁止するパターン
-FORBIDDEN_PATTERNS: list[str] = [
-    "import ",
-    " import",
-    "open(",
-    "subprocess",
-    "os.",
-    "eval(",
-    "exec(",
-    "__",
+# 静的安全チェック: 正規表現で禁止パターンを検出する
+# トークン境界を考慮した厳密なパターンを使用
+_FORBIDDEN_REGEXES: list[tuple[str, re.Pattern[str]]] = [
+    # import文: 行頭や空白・セミコロン後のimport、fromXimportも検出
+    ("import文", re.compile(r"(^|[\s;])import\s", re.MULTILINE)),
+    ("from import文", re.compile(r"(^|[\s;])from\s+\S+\s+import\s", re.MULTILINE)),
+    # ファイル操作 (open / pathlib)
+    ("open()", re.compile(r"\bopen\s*\(")),
+    # サブプロセス
+    ("subprocess", re.compile(r"\bsubprocess\b")),
+    # os/sys モジュールアクセス
+    ("os.", re.compile(r"\bos\s*\.")),
+    ("sys.", re.compile(r"\bsys\s*\.")),
+    # 危険な組み込み関数
+    ("eval()", re.compile(r"\beval\s*\(")),
+    ("exec()", re.compile(r"\bexec\s*\(")),
+    ("compile()", re.compile(r"\bcompile\s*\(")),
+    ("globals()", re.compile(r"\bglobals\s*\(")),
+    ("locals()", re.compile(r"\blocals\s*\(")),
+    ("vars()", re.compile(r"\bvars\s*\(")),
+    ("dir()", re.compile(r"\bdir\s*\(")),
+    # breakpoint / input はbuiltinsにないが静的にも明示ブロック
+    ("breakpoint()", re.compile(r"\bbreakpoint\s*\(")),
+    ("input()", re.compile(r"\binput\s*\(")),
+    # dunder属性アクセス（__class__, __mro__, __builtins__ 等）
+    ("dunder属性", re.compile(r"__\w+")),
+    # 文字列結合によるimport迂回対策
+    ("__import__", re.compile(r"__import__")),
+    # pandas/numpyを経由したファイルI/O: 読み取り
+    ("pd.read_*(ファイル読み取り)", re.compile(
+        r"\bpd\s*\.\s*read_(?:csv|excel|json|parquet|feather|hdf|orc|sas|spss|stata|table|fwf|clipboard)\s*\("
+    )),
+    ("pd.ExcelFile()", re.compile(r"\bpd\s*\.\s*ExcelFile\s*\(")),
+    ("np.load()", re.compile(r"\bnp\s*\.\s*(?:load|loadtxt|fromfile|genfromtxt|memmap)\s*\(")),
+    # pandas/numpy/plotlyを経由したファイルI/O: 書き込み
+    ("df.to_csv/excel等(ファイル書き込み)", re.compile(
+        r"\.\s*to_(?:csv|excel|json|parquet|feather|hdf|orc|stata|pickle|sql)\s*\("
+    )),
+    ("np.save/savetxt()", re.compile(r"\bnp\s*\.\s*(?:save|savez|savetxt|tofile)\s*\(")),
+    ("fig.write_image/html()", re.compile(r"\bfig\s*\.\s*write_(?:image|html|json)\s*\(")),
+    ("plt.imsave()", re.compile(r"\bplt\s*\.\s*(?:imsave|rcParams)\s*[\[\(]")),
 ]
 
 
@@ -40,22 +71,29 @@ class CodeSafetyError(Exception):
 def check_code_safety(code: str) -> None:
     """コードの静的安全チェックを実施する
 
+    正規表現ベースの厳密なパターンマッチングで禁止構文を検出する。
+    トークン境界を考慮するため、単純な部分文字列マッチより迂回が困難。
+
     Args:
         code: チェック対象のPythonコード文字列
 
     Raises:
         CodeSafetyError: 禁止パターンが検出された場合
     """
-    for pattern in FORBIDDEN_PATTERNS:
-        if pattern in code:
+    for label, pattern in _FORBIDDEN_REGEXES:
+        if pattern.search(code):
             raise CodeSafetyError(
-                f"セキュリティポリシー違反: '{pattern}' の使用は禁止されています"
+                f"セキュリティポリシー違反: '{label}' の使用は禁止されています"
             )
 
 
 def _build_safe_globals(df: pd.DataFrame) -> dict[str, Any]:
-    """制限されたexec環境のグローバル変数を構築する"""
-    # 許可するbuiltins
+    """制限されたexec環境のグローバル変数を構築する
+
+    allowed_builtinsには、モジュール探索や動的属性アクセスに悪用できる
+    getattr / vars / dir / compile / globals / locals 等を含めない。
+    """
+    # 許可するbuiltins（危険な動的アクセス関数は除外）
     allowed_builtins = {
         "print": print,
         "len": len,
@@ -80,14 +118,15 @@ def _build_safe_globals(df: pd.DataFrame) -> dict[str, Any]:
         "map": map,
         "filter": filter,
         "isinstance": isinstance,
-        "type": type,
-        "hasattr": hasattr,
-        "getattr": getattr,
         "format": format,
         "repr": repr,
         "None": None,
         "True": True,
         "False": False,
+        # type/hasattr は静的チェックで __dunder__ アクセスを禁止しているため許可
+        "type": type,
+        "hasattr": hasattr,
+        # getattr は意図的に除外: getattr(pd, 'io') 等でモジュール探索が可能なため
     }
 
     safe_globals: dict[str, Any] = {
@@ -121,26 +160,33 @@ def _execute_code_internal(
     figure_bytes: bytes | None = None
     plotly_fig: object | None = None
 
-    # plt.savefigをオーバーライドしてBytesIOにキャプチャ
+    # plt.savefigをモンキーパッチしてBytesIOにキャプチャ
+    # MockPltオブジェクトではなく実際のpltモジュールを使い、savefigのみ差し替える。
+    # これによりplt.figure()等のmatplotlib内部状態管理が正常に動作する。
     fig_buffer = io.BytesIO()
-
-    original_savefig = plt.savefig
+    _original_savefig = plt.savefig
 
     def patched_savefig(*args: Any, **kwargs: Any) -> None:
-        """plt.savefigをBytesIOにリダイレクトするパッチ"""
-        plt.savefig(fig_buffer, format="png", bbox_inches="tight")
+        """plt.savefigをBytesIOにリダイレクトするパッチ
 
-    # plt.savefigをパッチ
-    safe_globals["plt"] = type("MockPlt", (), {
-        attr: getattr(plt, attr) for attr in dir(plt) if not attr.startswith("__")
-    })()
-    safe_globals["plt"].savefig = patched_savefig
+        ユーザーコードが plt.savefig("output.png") を呼んだとき、
+        実際のファイルではなく fig_buffer に PNG バイト列を書き込む。
+        """
+        plt.gcf().savefig(fig_buffer, format="png", bbox_inches="tight")
+
+    plt.savefig = patched_savefig  # type: ignore[assignment]
+    # safe_globalsのpltは実際のpltモジュールを参照させる（MockPltは不要）
+    safe_globals["plt"] = plt
 
     # stdoutキャプチャ
     stdout_buffer = io.StringIO()
 
-    with redirect_stdout(stdout_buffer):
-        exec(code, safe_globals)  # noqa: S102
+    try:
+        with redirect_stdout(stdout_buffer):
+            exec(code, safe_globals)  # noqa: S102
+    finally:
+        # 必ずplt.savefigを元に戻す
+        plt.savefig = _original_savefig  # type: ignore[assignment]
 
     # matplotlib figureのキャプチャ
     fig_buffer.seek(0)

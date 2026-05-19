@@ -127,7 +127,7 @@ print(result)
 
     def test_os_blocked(self) -> None:
         """os.が禁止されることのテスト"""
-        with pytest.raises(CodeSafetyError, match="os\\."):
+        with pytest.raises(CodeSafetyError, match="os"):
             check_code_safety("os.listdir('.')")
 
     def test_eval_blocked(self) -> None:
@@ -144,6 +144,31 @@ print(result)
         """__が禁止されることのテスト"""
         with pytest.raises(CodeSafetyError):
             check_code_safety("x.__class__.__mro__")
+
+    def test_pd_read_csv_blocked(self) -> None:
+        """pd.read_csv()によるファイル読み取りが禁止されることのテスト"""
+        with pytest.raises(CodeSafetyError, match="ファイル読み取り"):
+            check_code_safety("pd.read_csv('/etc/passwd')")
+
+    def test_df_to_csv_blocked(self) -> None:
+        """df.to_csv()によるファイル書き込みが禁止されることのテスト"""
+        with pytest.raises(CodeSafetyError, match="ファイル書き込み"):
+            check_code_safety("df.to_csv('/tmp/exfil.csv')")
+
+    def test_np_save_blocked(self) -> None:
+        """np.save()によるファイル書き込みが禁止されることのテスト"""
+        with pytest.raises(CodeSafetyError, match="np.save"):
+            check_code_safety("np.save('/tmp/data.npy', df)")
+
+    def test_np_load_blocked(self) -> None:
+        """np.load()によるファイル読み取りが禁止されることのテスト"""
+        with pytest.raises(CodeSafetyError, match="np.load"):
+            check_code_safety("np.load('/tmp/data.npy')")
+
+    def test_df_to_string_allowed(self) -> None:
+        """df.to_string()は許可されることのテスト"""
+        # to_string はファイルI/Oではなく文字列変換なので許可
+        check_code_safety("print(df.to_string())")
 
 
 class TestCodeExecutor:

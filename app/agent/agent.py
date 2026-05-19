@@ -158,16 +158,21 @@ class AnalysisAgent:
 
                 if not code_blocks:
                     logger.warning(f"コードブロックが見つかりません (attempt {attempt})")
-                    # コードが見つからない場合はそのまま返す
-                    explanation = raw_response.strip()
-                    return AgentResult(
-                        explanation=explanation,
-                        code=None,
-                        figure_bytes=None,
-                        plotly_fig=None,
-                        error="コードブロックが見つかりませんでした",
-                        raw_response=raw_response,
-                    )
+                    last_error = "コードブロックが見つかりませんでした"
+                    # 再試行可能なら次の試行でコード出力を促す
+                    if attempt < self.settings.max_retries:
+                        messages.append({
+                            "role": "assistant",
+                            "content": raw_response,
+                        })
+                        messages.append({
+                            "role": "user",
+                            "content": (
+                                "回答にPythonコードブロック（```python ... ```）が含まれていませんでした。"
+                                "必ず ```python と ``` でコードを囲んで再度出力してください。"
+                            ),
+                        })
+                    continue
 
                 # 最初のコードブロックを使用
                 extracted_code = code_blocks[0]

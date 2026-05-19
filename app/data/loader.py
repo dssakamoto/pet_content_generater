@@ -57,9 +57,10 @@ def _build_schema_summary(df: pd.DataFrame, max_chars: int = 1500) -> str:
 
     summary = "\n".join(lines)
 
-    # 文字数制限
+    # 文字数制限（省略記号を含めてmax_chars以内に収める）
+    _ELLIPSIS = "\n...(省略)"
     if len(summary) > max_chars:
-        summary = summary[:max_chars] + "\n...(省略)"
+        summary = summary[: max_chars - len(_ELLIPSIS)] + _ELLIPSIS
 
     return summary
 
@@ -88,7 +89,7 @@ def load_csv(file_content: bytes, filename: str) -> DataContext:
             df = pd.read_csv(io.BytesIO(file_content), encoding=encoding)
             logger.info(f"CSVファイル '{filename}' を {encoding} で読み込み成功")
             break
-        except (UnicodeDecodeError, Exception) as e:
+        except Exception as e:
             logger.debug(f"エンコーディング {encoding} で失敗: {e}")
             continue
 
@@ -136,10 +137,19 @@ def load_json(file_content: bytes, filename: str) -> DataContext:
 
 
 def load_excel(file_content: bytes, filename: str) -> DataContext:
-    """Excelファイルを読み込みDataContextを返す（openpyxl使用）"""
+    """Excelファイルを読み込みDataContextを返す
+
+    .xlsx / .xlsm は openpyxl エンジン、レガシー .xls は xlrd エンジンを使用する。
+    xlrd がインストールされていない場合は .xls 読み込みでエラーを返す。
+    """
+    engine = "xlrd" if filename.lower().endswith(".xls") else "openpyxl"
     try:
-        df = pd.read_excel(io.BytesIO(file_content), engine="openpyxl")
-        logger.info(f"Excelファイル '{filename}' の読み込み成功")
+        df = pd.read_excel(io.BytesIO(file_content), engine=engine)
+        logger.info(f"Excelファイル '{filename}' の読み込み成功 (engine={engine})")
+    except ImportError as e:
+        raise ValueError(
+            f"Excelファイル '{filename}' の読み込みには '{engine}' ライブラリが必要です: {e}"
+        )
     except Exception as e:
         raise ValueError(f"Excelファイル '{filename}' の読み込みに失敗しました: {e}")
 
